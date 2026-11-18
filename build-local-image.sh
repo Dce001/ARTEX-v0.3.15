@@ -1,8 +1,5 @@
 #!/usr/bin/env bash
-# 从本仓库源码构建本地镜像 artex:local（不联网拉取任何 ARTEX 预构建镜像）
-#
-# 步骤与官方 Dockerfile 注释、install.sh「② 本地编译运行」完全一致，
-# 只是把产物打成镜像，好让 docker compose 能直接用。
+# 从本仓库源码构建本地镜像 artex:local。
 # 前置：Go >= 1.26、Node/npm、Docker（含 buildx）。
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -35,4 +32,4 @@ docker build -t artex:local .
 echo
 echo "完成。接下来："
 echo "  cp .env.example .env        # 务必设置 POSTGRES_PASSWORD"
-echo "  docker compose up -d        # 用 artex:local，不拉取任何第三方镜像"
+echo "  docker compose up -d"

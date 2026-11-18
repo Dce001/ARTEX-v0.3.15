@@ -1,12 +1,9 @@
 # syntax=docker/dockerfile:1
 #
-# 从源码完整构建 ARTEX 运行镜像（加固层文件，不属于官方原版）。
-# 宿主机只需要 Docker，不需要 Go / Node / npm。
-# 不会拉取任何 ARTEX 预构建镜像；只拉取官方基础镜像与语言工具链。
-#
-# 运行层（第 3 阶段）与官方 Dockerfile 完全一致，仅把
+# 从源码完整构建运行镜像，宿主机只需要 Docker，不需要 Go / Node / npm。
+# 运行层（第 3 阶段）与 Dockerfile 一致，仅把
 #   "COPY dist/<arch>/artex"  换成  "COPY --from=build /out/artex"
-# 即：二进制由本文件在容器内编译，而不是从外面塞进来的。
+# 即：二进制由本文件在容器内编译。
 
 # ── 1) 前端静态产物 ──────────────────────────────────────
 FROM node:20-bookworm-slim AS web
