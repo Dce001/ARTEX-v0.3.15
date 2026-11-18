@@ -18,6 +18,9 @@ RUN NEXT_EXPORT=1 npm run build:static
 
 # ── 2) Go 单二进制（内嵌前端）────────────────────────────
 FROM golang:1.26.3-bookworm AS build
+# 国内网络可传 --build-arg GOPROXY=https://goproxy.cn,direct 加速
+ARG GOPROXY=https://proxy.golang.org,direct
+ENV GOPROXY=${GOPROXY}
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
