@@ -1,0 +1,19 @@
+# 本地构建加固层（本文件不属于官方原版）
+#
+# 背景：官方 docker-compose.yml 第 18 行写的是
+#   image: autumn27/artex:${ARTEX_TAG:-latest}
+# 且没有 build: 段；官方 install.sh 的「① 全部 Docker」还会执行
+#   docker compose pull
+# 上游作者已删库，latest 是可变 tag、当前内容不可验证 —— 这正是
+# 2026 年 ARTEX 供应链投毒事件的载体。
+#
+# 作用：Docker Compose 默认自动加载本文件，把 artex 服务的镜像
+# 覆盖成本地名，并禁止任何拉取行为。这样无论执行
+#   docker compose pull / up -d / install.sh ①
+# 都不会去碰 autumn27/artex:latest。
+#
+# 官方 600 个文件一个字节都没改，见 ORIGIN.md。
+services:
+  artex:
+    image: artex:local
+    pull_policy: never
