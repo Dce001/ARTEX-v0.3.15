@@ -1,0 +1,49 @@
+# syntax=docker/dockerfile:1
+#
+# 从源码完整构建 ARTEX 运行镜像（加固层文件，不属于官方原版）。
+# 宿主机只需要 Docker，不需要 Go / Node / npm。
+# 不会拉取任何 ARTEX 预构建镜像；只拉取官方基础镜像与语言工具链。
+#
+# 运行层（第 3 阶段）与官方 Dockerfile 完全一致，仅把
+#   "COPY dist/<arch>/artex"  换成  "COPY --from=build /out/artex"
+# 即：二进制由本文件在容器内编译，而不是从外面塞进来的。
+
+# ── 1) 前端静态产物 ──────────────────────────────────────
+FROM node:20-bookworm-slim AS web
+WORKDIR /src/web
+COPY web/package.json web/package-lock.json ./
+RUN npm ci
+COPY web/ ./
+RUN NEXT_EXPORT=1 npm run build:static
+
+# ── 2) Go 单二进制（内嵌前端）────────────────────────────
+FROM golang:1.26.3-bookworm AS build
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN mkdir -p server/webui/dist
+COPY --from=web /src/web/out/ server/webui/dist/
+RUN CGO_ENABLED=0 go build -tags embedui -trimpath -o /out/artex ./cmd/artex
+
+# ── 3) 运行层（与官方 Dockerfile 运行层逐行一致）──────────
+FROM python:3.12-slim-bookworm
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      ca-certificates ripgrep curl wget vim git jq unzip \
+      dnsutils iputils-ping netcat-openbsd inetutils-telnet whois nmap \
+    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
+    && rm -rf /var/lib/apt/lists/*
+RUN npm install -g @playwright/mcp@latest @playwright/cli@latest playwright@latest \
+    && playwright-cli --help \
+    && playwright install --with-deps chromium \
+    && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+COPY --from=build /out/artex /app/artex
+COPY start.sh /app/start.sh
+RUN chmod +x /app/artex /app/start.sh
+COPY skills/ /app/skills/
+VOLUME ["/app/data"]
+EXPOSE 8787 8788
+ENTRYPOINT ["/app/start.sh"]
+CMD ["-addr", ":8787", "-proxy", ":8788"]

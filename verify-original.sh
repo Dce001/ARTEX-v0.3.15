@@ -17,6 +17,7 @@ import os, subprocess, hashlib, base64
 
 OFFICIAL = "h1:maolFfGTu2/JCOSR1Lua75lNdA/DC9nfAYKonsmc/wE="
 ADDED = {"ORIGIN.md", "docker-compose.override.yml",
+         "Dockerfile.build", "setup.sh",
          "build-local-image.sh", "verify-original.sh"}
 PREFIX = "github.com/Autumn-27/artex@v0.3.15/"
 IOCS = ["verifyCaptcha", 'json:"captcha"', "tomicdd", "ce85d8369ccc"]
@@ -45,7 +46,7 @@ if not files:
             if rel not in ADDED:
                 files.append(rel)
     files = sorted(files)
-    src = "目录扫描（已排除 4 个加固层文件）"
+    src = "目录扫描（已排除 6 个加固层文件）"
 
 print("[1/4] 官方文件清单：%s" % src)
 print("      文件数 %d  %s" % (len(files), "OK" if len(files) == 600 else "警告：期望 600"))
@@ -96,15 +97,17 @@ else:
     t = open(ov, encoding="utf-8").read()
     a = "artex:local" in t
     b = "pull_policy: never" in t
-    print("      image 锁定 artex:local : " + ("OK" if a else "FAIL"))
-    print("      pull_policy: never     : " + ("OK" if b else "FAIL"))
+    c = "Dockerfile.build" in t and os.path.isfile("Dockerfile.build")
+    print("      image 锁定 artex:local  : " + ("OK" if a else "FAIL"))
+    print("      pull_policy: never      : " + ("OK" if b else "FAIL"))
+    print("      build → Dockerfile.build: " + ("OK" if c else "FAIL"))
     print("      结论: " + ("OK  不会拉取任何第三方 ARTEX 镜像"
-                            if a and b else "FAIL 加固层被改动，请检查"))
+                            if a and b and c else "FAIL 加固层被改动，请检查"))
 
 main = "docker-compose.yml"
 if os.path.isfile(main):
     m = open(main, encoding="utf-8").read()
-    print("      官方主 compose 仍为原文: " +
+    print("      官方主 compose 仍为原文 : " +
           ("OK" if "autumn27/artex:${ARTEX_TAG:-latest}" in m else "注意 已被修改"))
 
 print("\n=== 核验结束 ===")

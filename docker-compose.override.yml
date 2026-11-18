@@ -7,13 +7,18 @@
 # 上游作者已删库，latest 是可变 tag、当前内容不可验证 —— 这正是
 # 2026 年 ARTEX 供应链投毒事件的载体。
 #
-# 作用：Docker Compose 默认自动加载本文件，把 artex 服务的镜像
-# 覆盖成本地名，并禁止任何拉取行为。这样无论执行
-#   docker compose pull / up -d / install.sh ①
+# 作用：Docker Compose 默认自动加载本文件，把 artex 服务指向
+# 本地多阶段构建（Dockerfile.build），并禁止任何拉取行为。
+# 这样无论执行
+#   docker compose pull / up -d / up -d --build / install.sh ①
 # 都不会去碰 autumn27/artex:latest。
+# 新电脑一键安装见 ORIGIN.md 与 setup.sh。
 #
 # 官方 600 个文件一个字节都没改，见 ORIGIN.md。
 services:
   artex:
     image: artex:local
+    build:
+      context: .
+      dockerfile: Dockerfile.build
     pull_policy: never
