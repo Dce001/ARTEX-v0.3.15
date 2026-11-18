@@ -128,6 +128,8 @@ docker compose up -d
   没有 `.git`。因此它是「某个发布点的完整源码」，不是「带完整历史的 fork」。
 - `Dockerfile.build` / `setup.sh` 是加固层新增文件，未经上游验证；若在你的
   环境构建失败，可改用第 5 节的方式 A。
+  （2026-11-18 已在干净沙箱实测：`docker build -f Dockerfile.build` 全链路通过，
+  前端 Next.js 静态导出 + `go build -tags embedui` 编译成功，耗时约 3.5 分钟。）
 - 快照是静态的，不会收到上游安全修复（上游已不存在）。请自行关注社区安全通告。
 
 ## 8. 自行核验
