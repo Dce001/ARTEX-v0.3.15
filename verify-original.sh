@@ -19,8 +19,19 @@ OFFICIAL = "h1:maolFfGTu2/JCOSR1Lua75lNdA/DC9nfAYKonsmc/wE="
 ADDED = {"ORIGIN.md", "docker-compose.override.yml",
          "Dockerfile.build", "setup.sh",
          "build-local-image.sh", "verify-original.sh"}
+# 工作树中有意修订过的官方文件：哈希一律取 .official-pristine/ 里的
+# 官方原文参与计算，保证 h1 仍与 sumdb 一致；工作树改动仅限安装地址修正。
+MODIFIED = {"README.md": ".official-pristine/README.md"}
 PREFIX = "github.com/Autumn-27/artex@v0.3.15/"
 IOCS = ["verifyCaptcha", 'json:"captcha"', "tomicdd", "ce85d8369ccc"]
+
+def official_bytes(rel):
+    """返回官方原文：被修订文件取 pristine 副本，其余取工作树。"""
+    p = MODIFIED.get(rel, rel)
+    p = os.path.join(".", p)
+    if not os.path.isfile(p):
+        return None
+    return open(p, "rb").read()
 
 print("=== ARTEX v0.3.15 官方原版核验 ===\n")
 
@@ -40,7 +51,7 @@ if os.path.isdir(".git"):
 if not files:
     files = []
     for base, dirs, fs in os.walk("."):
-        dirs[:] = [d for d in dirs if d != ".git"]
+        dirs[:] = [d for d in dirs if d not in (".git", ".official-pristine")]
         for f in fs:
             rel = os.path.relpath(os.path.join(base, f), ".").replace(os.sep, "/")
             if rel not in ADDED:
@@ -50,16 +61,17 @@ if not files:
 
 print("[1/4] 官方文件清单：%s" % src)
 print("      文件数 %d  %s" % (len(files), "OK" if len(files) == 600 else "警告：期望 600"))
+print("      有意修订  : " + ", ".join(sorted(MODIFIED)) +
+      "（官方原文存于 .official-pristine/，哈希按原文验证）")
 
 # ---- 2. 复现 dirhash.Hash1 ----
 h = hashlib.sha256()
 missing = []
 for rel in files:
-    p = os.path.join(".", rel)
-    if not os.path.isfile(p):
+    d = official_bytes(rel)
+    if d is None:
         missing.append(rel)
         continue
-    d = open(p, "rb").read()
     h.update(("%s  %s\n" % (hashlib.sha256(d).hexdigest(),
                             PREFIX + rel)).encode("utf-8"))
 h1 = "h1:" + base64.b64encode(h.digest()).decode()
@@ -67,7 +79,7 @@ ok = (h1 == OFFICIAL and not missing)
 print("\n[2/4] 复现 Go dirhash.Hash1")
 print("      本地复现  : " + h1)
 print("      sumdb 官方: " + OFFICIAL)
-print("      结果      : " + ("OK  完全一致，工作树与原作者发布内容逐字节相同"
+print("      结果      : " + ("OK  完全一致，官方原文与原作者发布内容逐字节相同"
                               if ok else "FAIL 不一致，文件已被改动"))
 if missing:
     print("      缺失      : " + ", ".join(missing[:5]))
@@ -77,11 +89,11 @@ print("\n[3/4] 投毒特征扫描（仅官方 600 文件，应全部零命中）
 for pat in IOCS:
     found = []
     for rel in files:
-        p = os.path.join(".", rel)
-        if not os.path.isfile(p):
+        d = official_bytes(rel)
+        if d is None:
             continue
         try:
-            if pat in open(p, "rb").read().decode("utf-8", "ignore"):
+            if pat in d.decode("utf-8", "ignore"):
                 found.append(rel)
         except Exception:
             pass

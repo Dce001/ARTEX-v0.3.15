@@ -66,30 +66,34 @@ AI 自主渗透测试系统（Go 后端 + Next.js 前端）
 
 > 依赖数据库 **PostgreSQL**；探索需配置 **LLM**（`ANTHROPIC_API_KEY` 或 `OPENAI_API_KEY`，也可在 UI 里配）。
 
+> ⚠️ **重要：本仓库与上游的关系**（2026-11-18 修订）
+> 上游原作者 Autumn-27 已删除原仓库，此后出现的「v0.3.16」与 `autumn27/artex` 镜像均卷入供应链投毒事件（详见 [ORIGIN.md](ORIGIN.md)）。本仓库是**投毒前最后一个官方版本 v0.3.15 的完整快照**（600 文件，可运行 `bash verify-original.sh` 密码学自证），并加了本地构建加固层。请只使用本仓库的代码与 Releases；**不要**克隆任何指向 `Autumn-27/ARTEX` 的地址，也不要拉取 `autumn27/artex` 镜像。
+
 ### 方式一：一键安装脚本（推荐）
 
 ```bash
-git clone https://github.com/Autumn-27/ARTEX.git
-cd ARTEX
-./install.sh
+git clone https://github.com/Dce001/ARTEX-v0.3.15.git
+cd ARTEX-v0.3.15
+./setup.sh
 ```
 
-脚本会：检测 / 自动安装 Docker → 让你选 **① 全部 Docker** 或 **② 本地编译运行**：
-
-- **① 全部 Docker**：填一个 Postgres 密码（可回车随机）→ 自动写 `.env` → `docker compose up -d`。
-- **② 本地运行**：选数据库（连已有 / 用 Docker 起一个）→ 生成 `config.json` → `go` 编译内嵌单二进制 → 启动。
+`setup.sh` 会：检测 / 自动安装 Docker → 生成 `.env`（随机数据库密码）→ **从源码本地构建镜像**（`Dockerfile.build`，全程不拉取任何第三方 ARTEX 镜像）→ 启动。
 
 装好后打开 **http://localhost:8787**（首次进入 `/setup` 设置管理员密码）。
+
+> 想要交互式安装（自选 Docker / 本地编译、自选数据库），也可改用官方原版 `./install.sh`——加固层已确保其 Docker 路径同样只走本地构建。
 
 ### 方式二：Docker Compose（手动）
 
 ```bash
-git clone https://github.com/Autumn-27/ARTEX.git
-cd ARTEX
+git clone https://github.com/Dce001/ARTEX-v0.3.15.git
+cd ARTEX-v0.3.15
 cp .env.example .env          # 填 POSTGRES_PASSWORD、可选 ANTHROPIC_API_KEY
-docker compose up -d          # 拉取 autumn27/artex 镜像 + postgres
+docker compose up -d          # 本地构建 artex 镜像（Dockerfile.build）+ postgres
 # → http://localhost:8787
 ```
+
+> `docker-compose.override.yml` 已把服务锁死为本地构建并 `pull_policy: never`，compose 永远不会去拉 `autumn27/artex`。
 
 镜像已含常用工具（ripgrep/curl/vim/npm/nmap…）；`./skills` 与 `./data` 以绑定挂载持久化。
 
@@ -100,7 +104,7 @@ docker compose up -d          # 拉取 autumn27/artex 镜像 + postgres
 
 ### 方式三：下载预编译二进制（Releases）
 
-到 [Releases](https://github.com/Autumn-27/ARTEX/releases) 下载对应平台的 zip，解压后得到 `artex` + `start.sh`（Windows 为 `start.bat`）+ `skills/` + `config.example.json`：
+到 [Releases](https://github.com/Dce001/ARTEX-v0.3.15/releases) 下载对应平台的 zip，解压后得到 `artex` + `start.sh`（Windows 为 `start.bat`）+ `skills/` + `config.example.json`：
 
 ```bash
 cp config.example.json config.json   # 填好 database 连接
@@ -142,9 +146,11 @@ ARTEX_TARGETS=linux/amd64,windows/amd64 ./build.sh --release
 
 ## 更新升级
 
+> ⚠️ **上游已删库，请勿使用任何「在线更新」通道**：页面里的「一键更新」、`update.sh` 的 Docker 更新、`docker compose pull` 都指向已不存在 / 不可信的上游地址（投毒事件的载体）。本仓库是**封存快照**，正常情况下不需要更新；如确有更新，唯一可信来源是[本仓库的 Releases](https://github.com/Dce001/ARTEX-v0.3.15/releases)（下述「方式四」）。以下官方原文仅作存档保留。
+
 > 升级只换程序、不动数据：Postgres 数据卷 `pgdata`、`./data`（jwt.key / SQLite 等）、`./skills` 都会保留。**数据库迁移无需手动执行**——`artex` 每次启动会幂等重跑 `schema.sql`（含 `ADD COLUMN` / `CREATE INDEX IF NOT EXISTS`），即“重启即迁移”。升级前仍建议先备份 `./data` 与数据库。
 
-### 方式一：页面一键更新（推荐）
+### 方式一：页面一键更新（已不可用，仅存档）
 
 在 **系统配置** 页（侧边栏「系统配置」→ `/system/settings`）的**版本与更新**卡片里，可以直接检查并安装新版本，无需登录服务器。
 
@@ -182,7 +188,7 @@ docker image prune -f          # 清理旧镜像（可选）
 
 ### 方式四：预编译二进制（Releases）
 
-到 [Releases](https://github.com/Autumn-27/ARTEX/releases) 下载新版本 zip，停掉旧进程后覆盖 `artex` 与 `skills/`（保留你的 `config.json` 与 `data/`），重启即可：
+到 [Releases](https://github.com/Dce001/ARTEX-v0.3.15/releases) 下载新版本 zip，停掉旧进程后覆盖 `artex` 与 `skills/`（保留你的 `config.json` 与 `data/`），重启即可：
 
 ```bash
 cp -r <解压目录>/skills ./ && cp <解压目录>/artex ./
